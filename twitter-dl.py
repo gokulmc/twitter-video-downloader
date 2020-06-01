@@ -24,16 +24,19 @@ class TwitterDownloader:
 	video_api = 'https://api.twitter.com/1.1/videos/tweet/config/'
 	tweet_data = {}
 
-	def __init__(self, tweet_url, output_dir = './output', debug = 0):
+	def __init__(self, tweet_url, output_dir = './output', debug = 0, resol=720):
 		self.tweet_url = tweet_url
 		self.output_dir = output_dir
 		self.debug = debug
+		self.resol = resol
+		# self.last_resol = ""
+		self.flag = 0
 
 		if debug > 2:
 			self.debug = 2
 
 		"""
-		We split on ? to clean up the URL. Sharing tweets, for example, 
+		We split on ? to clean up the URL. Sharing tweets, for example,
 		will add ? with data about which device shared it.
 		The rest is just getting the user and ID to work with.
 		"""
@@ -62,56 +65,63 @@ class TwitterDownloader:
 
 			for plist in playlist.playlists:
 				resolution = str(plist.stream_info.resolution[0]) + 'x' + str(plist.stream_info.resolution[1])
-				resolution_file = Path(self.storage) / Path(resolution + '.mp4')
+				# self.last_resol = resolution
+				print(resolution)
+				if(str(self.resol) in resolution):
+					self.flag = 1
+					resolution_file = Path(self.storage) / Path(resolution + '.mp4')
 
-				print('[+] Downloading ' + resolution)
+					print('[+] Downloading ' + resolution)
 
-				playlist_url = video_host + plist.uri
+					playlist_url = video_host + plist.uri
 
-				ts_m3u8_response = self.requests.get(playlist_url, headers = {'Authorization': None})
-				ts_m3u8_parse = m3u8.loads(ts_m3u8_response.text)
+					ts_m3u8_response = self.requests.get(playlist_url, headers = {'Authorization': None})
+					ts_m3u8_parse = m3u8.loads(ts_m3u8_response.text)
 
-				ts_list = []
-				ts_full_file_list = []
+					ts_list = []
+					ts_full_file_list = []
 
-				for ts_uri in ts_m3u8_parse.segments.uri:
-					# ts_list.append(video_host + ts_uri)
+					for ts_uri in ts_m3u8_parse.segments.uri:
+						# ts_list.append(video_host + ts_uri)
 
-					ts_file = requests.get(video_host + ts_uri)
-					fname = ts_uri.split('/')[-1]
-					ts_path = Path(self.storage) / Path(fname)
-					ts_list.append(ts_path)
+						ts_file = requests.get(video_host + ts_uri)
+						fname = ts_uri.split('/')[-1]
+						ts_path = Path(self.storage) / Path(fname)
+						ts_list.append(ts_path)
 
-					ts_path.write_bytes(ts_file.content)
+						ts_path.write_bytes(ts_file.content)
 
-				ts_full_file = Path(self.storage) / Path(resolution + '.ts')
-				ts_full_file = str(ts_full_file)
-				ts_full_file_list.append(ts_full_file)
+					ts_full_file = Path(self.storage) / Path(resolution + '.ts')
+					ts_full_file = str(ts_full_file)
+					ts_full_file_list.append(ts_full_file)
 
-				# Shamelessly taken from https://stackoverflow.com/questions/13613336/python-concatenate-text-files/27077437#27077437
-				with open(str(ts_full_file), 'wb') as wfd:
-					for f in ts_list:
-						with open(f, 'rb') as fd:
-							shutil.copyfileobj(fd, wfd, 1024 * 1024 * 10)
+					# Shamelessly taken from https://stackoverflow.com/questions/13613336/python-concatenate-text-files/27077437#27077437
+					with open(str(ts_full_file), 'wb') as wfd:
+						for f in ts_list:
+							with open(f, 'rb') as fd:
+								shutil.copyfileobj(fd, wfd, 1024 * 1024 * 10)
 
 
-				for ts in ts_full_file_list:
-					print('\t[*] Doing the magic ...')
-					ffmpeg\
-						.input(ts)\
-						.output(str(resolution_file), acodec = 'copy', vcodec = 'libx264', format = 'mp4', loglevel = 'error')\
-						.overwrite_output()\
-						.run()
+					for ts in ts_full_file_list:
+						print('\t[*] Doing the magic ...')
+						ffmpeg\
+							.input(ts)\
+							.output(str(resolution_file), acodec = 'copy', vcodec = 'libx264', format = 'mp4', loglevel = 'error')\
+							.overwrite_output()\
+							.run()
 
-				print('\t[+] Doing cleanup')
+					print('\t[+] Doing cleanup')
 
-				for ts in ts_list:
-					p = Path(ts)
-					p.unlink()
+					for ts in ts_list:
+						p = Path(ts)
+						p.unlink()
 
-				for ts in ts_full_file_list:
-					p = Path(ts)
-					p.unlink()
+					for ts in ts_full_file_list:
+						p = Path(ts)
+						p.unlink()
+			if (self.flag==0):
+				print("Matching resolution not found, Choose from above resolutions")
+
 
 		else:
 			print('[-] Sorry, single resolution video download is not yet implemented. Please submit a bug report with the link to the tweet.')
@@ -193,8 +203,9 @@ if __name__ == '__main__':
 	parser.add_argument('tweet_url', help = 'The video URL on Twitter (https://twitter.com/<user>/status/<id>).')
 	parser.add_argument('-o', '--output', dest = 'output', default = './output', help = 'The directory to output to. The structure will be: <output>/<user>/<id>.')
 	parser.add_argument('-d', '--debug', default = 0, action = 'count', dest = 'debug', help = 'Debug. Add more to print out response bodies (maximum 2).')
+	parser.add_argument('-r', '--resol', default = 720,  dest = 'resol' , help = 'Specify the Resolution of the video (720,480,320)')
 
 	args = parser.parse_args()
 
-	twitter_dl = TwitterDownloader(args.tweet_url, args.output, args.debug)
+	twitter_dl = TwitterDownloader(args.tweet_url, args.output, args.debug, args.resol)
 	twitter_dl.download()
