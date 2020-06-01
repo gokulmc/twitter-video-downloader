@@ -1,4 +1,3 @@
-[![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/h4ckninja)
 
 Twitter Video Downloader
 ========================
@@ -11,14 +10,18 @@ Installation
 
 Python3 is a **must**.
 
-`pip install -r requirements.txt`.
+`pip3 install -r requirements.txt`.
 
 You will also need [ffmpeg](https://ffmpeg.org/). Install for your operating system of choice. If you use the supplied Vagrant box, this will be taken care of for you.
 
 Usage
 =====
 
-`twitter-dl.py [-hdo] VIDEO_URL`
+`python3 twitter-dl.py [-hdo] VIDEO_URL`
+`python3 twitter-dl.py [-r 720] VIDEO_URL`
+`python3 twitter-dl.py [-0 DIR] VIDEO_URL`
+
+
 
 `-d` or `--debug`: This will enable debugging output. Additional `-d` flags (up to 2) will increase debugging.
 
